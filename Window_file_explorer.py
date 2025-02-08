@@ -4,13 +4,14 @@ import subprocess
 import shutil
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeView, QFileSystemModel, QVBoxLayout, QWidget, QLabel, QMenu, QAction, QMessageBox, QFileDialog, QLineEdit
 from PyQt5.QtCore import Qt, QPoint, QMimeData
-from PyQt5.QtGui import QDrag
+from PyQt5.QtGui import QDrag, QIcon
 
 class FileExplorer(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Safdar Orders")
+        self.setWindowIcon(QIcon("my_icon.ico"))  # ✅ Icon added here
         self.setGeometry(100, 100, 1000, 600)
 
         self.central_widget = QWidget()
