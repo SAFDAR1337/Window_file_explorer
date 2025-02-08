@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 import shutil
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeView, QFileSystemModel, QVBoxLayout, QWidget, QLabel, QMenu, QAction, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeView, QFileSystemModel, QVBoxLayout, QWidget, QLabel, QMenu, QAction, QMessageBox, QFileDialog, QLineEdit
 from PyQt5.QtCore import Qt, QPoint
 
 class FileExplorer(QMainWindow):
@@ -16,6 +16,14 @@ class FileExplorer(QMainWindow):
         self.setCentralWidget(self.central_widget)
         layout = QVBoxLayout()
         self.central_widget.setLayout(layout)
+
+        self.left_search = QLineEdit()
+        self.left_search.setPlaceholderText("Search Directories...")
+        self.left_search.textChanged.connect(self.filter_left_tree)
+        
+        self.middle_search = QLineEdit()
+        self.middle_search.setPlaceholderText("Search Subdirectories...")
+        self.middle_search.textChanged.connect(self.filter_middle_tree)
 
         self.left_label = QLabel("Directories")
         self.middle_label = QLabel("Subdirectories")
@@ -49,11 +57,29 @@ class FileExplorer(QMainWindow):
         self.copy_mode = None  
 
         layout.addWidget(self.left_label)
+        layout.addWidget(self.left_search)
         layout.addWidget(self.left_tree)
         layout.addWidget(self.middle_label)
+        layout.addWidget(self.middle_search)
         layout.addWidget(self.middle_tree)
         layout.addWidget(self.right_label)
         layout.addWidget(self.right_tree)
+
+    def filter_left_tree(self):
+        filter_text = self.left_search.text().lower()
+        self.left_tree.setRootIndex(self.left_model.index("E:/Orders"))
+        self.filter_tree(self.left_tree, self.left_model, filter_text)
+
+    def filter_middle_tree(self):
+        filter_text = self.middle_search.text().lower()
+        self.filter_tree(self.middle_tree, self.middle_model, filter_text)
+
+    def filter_tree(self, tree, model, filter_text):
+        root_index = tree.rootIndex()
+        for row in range(model.rowCount(root_index)):
+            index = model.index(row, 0, root_index)
+            item_name = model.fileName(index).lower()
+            tree.setRowHidden(row, root_index, filter_text not in item_name)
 
     def load_subdirectories(self, index):
         path = self.left_model.filePath(index)
@@ -105,13 +131,11 @@ class FileExplorer(QMainWindow):
         menu.exec_(self.right_tree.viewport().mapToGlobal(position))
 
     def copy_item(self, path):
-        """Copy file or folder to clipboard."""
         self.copied_path = path
         self.copy_mode = "file" if os.path.isfile(path) else "folder"
         print(f"Copied: {path}")  
 
     def paste_item_anywhere(self):
-        """Paste copied file/folder to any location selected by the user."""
         if not self.copied_path:
             QMessageBox.warning(self, "Paste Error", "Nothing copied to paste!")
             return  
