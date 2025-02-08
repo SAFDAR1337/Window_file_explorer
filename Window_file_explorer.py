@@ -3,7 +3,8 @@ import os
 import subprocess
 import shutil
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeView, QFileSystemModel, QVBoxLayout, QWidget, QLabel, QMenu, QAction, QMessageBox, QFileDialog, QLineEdit
-from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtCore import Qt, QPoint, QMimeData
+from PyQt5.QtGui import QDrag
 
 class FileExplorer(QMainWindow):
     def __init__(self):
@@ -52,6 +53,10 @@ class FileExplorer(QMainWindow):
         self.right_tree.doubleClicked.connect(self.open_path)  
         self.right_tree.setContextMenuPolicy(Qt.CustomContextMenu)  
         self.right_tree.customContextMenuRequested.connect(self.show_context_menu)
+        self.right_tree.setDragEnabled(True)
+        self.right_tree.setAcceptDrops(True)
+        self.right_tree.viewport().setAcceptDrops(True)
+        self.right_tree.setDropIndicatorShown(True)
 
         self.copied_path = None  
         self.copy_mode = None  
@@ -123,11 +128,6 @@ class FileExplorer(QMainWindow):
         copy_action.triggered.connect(lambda: self.copy_item(path))
         menu.addAction(copy_action)
 
-        paste_action = QAction("Paste (Anywhere)", self)
-        paste_action.setEnabled(self.copied_path is not None)  
-        paste_action.triggered.connect(self.paste_item_anywhere)
-        menu.addAction(paste_action)
-
         menu.exec_(self.right_tree.viewport().mapToGlobal(position))
 
     def copy_item(self, path):
@@ -135,34 +135,41 @@ class FileExplorer(QMainWindow):
         self.copy_mode = "file" if os.path.isfile(path) else "folder"
         print(f"Copied: {path}")  
 
-    def paste_item_anywhere(self):
-        if not self.copied_path:
-            QMessageBox.warning(self, "Paste Error", "Nothing copied to paste!")
-            return  
+    def startDrag(self, event):
+        index = self.right_tree.currentIndex()
+        if not index.isValid():
+            return
 
-        target_directory = QFileDialog.getExistingDirectory(self, "Select Folder to Paste")
-        if not target_directory:
-            return  
+        path = self.right_model.filePath(index)
+        mime_data = QMimeData()
+        mime_data.setText(path)
 
-        try:
-            item_name = os.path.basename(self.copied_path)
-            target_path = os.path.join(target_directory, item_name)
+        drag = QDrag(self.right_tree)
+        drag.setMimeData(mime_data)
+        drag.exec_(Qt.CopyAction)
 
-            if os.path.exists(target_path):
-                QMessageBox.warning(self, "Paste Error", f"{item_name} already exists in the target folder!")
-                return  
+    def dragEnterEvent(self, event):
+        event.accept()
 
-            if self.copy_mode == "file":
-                shutil.copy2(self.copied_path, target_path)  
-            else:
-                shutil.copytree(self.copied_path, target_path)  
+    def dragMoveEvent(self, event):
+        event.accept()
 
-            QMessageBox.information(self, "Success", f"Copied {item_name} to {target_directory}")
+    def dropEvent(self, event):
+        target_index = self.right_tree.indexAt(event.pos())
+        if not target_index.isValid():
+            return
+        
+        target_path = self.right_model.filePath(target_index)
+        source_path = event.mimeData().text()
 
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to copy: {e}")
-
-        self.copied_path = None  
+        if os.path.isdir(target_path):
+            shutil.move(source_path, target_path)
+            QMessageBox.information(self, "Success", f"Moved {os.path.basename(source_path)} to {target_path}")
+        else:
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            shutil.copy(source_path, desktop_path)
+            QMessageBox.information(self, "Success", f"Copied {os.path.basename(source_path)} to Desktop")
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
