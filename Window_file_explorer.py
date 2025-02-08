@@ -11,7 +11,7 @@ class FileExplorer(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Safdar Orders")
-        self.setWindowIcon(QIcon("my_icon.ico"))  # ✅ Icon added here
+        self.setWindowIcon(QIcon("C:/Users/Safdar/Desktop/Window_file_explorer/my_icon.ico"))  # ✅ Icon added here
         self.setGeometry(100, 100, 1000, 600)
 
         self.central_widget = QWidget()

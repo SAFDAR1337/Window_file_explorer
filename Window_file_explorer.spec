@@ -5,7 +5,7 @@ a = Analysis(
     ['Window_file_explorer.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('my_icon.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
